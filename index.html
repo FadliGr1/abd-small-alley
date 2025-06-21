@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTTH KMZ Automation</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- JSZip Library for KMZ (ZIP) handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- JSZip Utils for saving files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip-utils/0.1.0/jszip-utils.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for better layout */
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        h1 {
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 700; /* font-bold */
+            color: #1f2937; /* text-gray-900 */
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .input-group label {
+            font-weight: 600; /* font-semibold */
+            color: #374151; /* text-gray-700 */
+        }
+        .input-group input[type="file"],
+        .input-group input[type="text"] {
+            padding: 12px 15px;
+            border: 1px solid #d1d5db; /* border-gray-300 */
+            border-radius: 10px;
+            font-size: 1rem;
+            color: #4b5563; /* text-gray-800 */
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .input-group input[type="file"]:focus,
+        .input-group input[type="text"]:focus {
+            outline: none;
+            border-color: #4f46e5; /* indigo-600 */
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2); /* indigo-600 with opacity */
+        }
+        .button-group {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-top: 10px;
+        }
+        .btn {
+            flex-grow: 1; /* Allow buttons to grow and fill space */
+            min-width: 180px; /* Minimum width before wrapping */
+            background-color: #4f46e5; /* indigo-600 */
+            color: white;
+            padding: 14px 25px;
+            border-radius: 10px;
+            font-weight: 600; /* font-semibold */
+            font-size: 1.125rem; /* text-lg */
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s, opacity 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            text-decoration: none; /* For download link */
+        }
+        .btn:hover:not(.btn-disabled) {
+            background-color: #4338ca; /* indigo-700 */
+            transform: translateY(-2px);
+        }
+        .btn:active:not(.btn-disabled) {
+            transform: translateY(0);
+        }
+        .btn-download {
+            background-color: #10b981; /* emerald-500 */
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3);
+        }
+        .btn-download:hover:not(.btn-disabled) {
+            background-color: #059669; /* emerald-600 */
+        }
+        .btn-disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        .message-box {
+            background-color: #e0f2fe; /* light blue for info */
+            color: #0c4a6e; /* dark blue for text */
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #90cdf4; /* blue border */
+            margin-top: 15px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            text-align: center;
+        }
+        .message-box.error {
+            background-color: #fee2e2; /* light red for errors */
+            color: #991b1b; /* dark red for text */
+            border-color: #ef4444; /* red border */
+        }
+        .message-box.success {
+            background-color: #d1fae5; /* light green for success */
+            color: #065f46; /* dark green for text */
+            border-color: #34d399; /* green border */
+        }
+        .download-message {
+            text-align: center;
+            margin-top: 15px;
+            margin-bottom: 5px;
+            font-size: 1rem;
+            color: #374151;
+            /* Default display is now handled by JS for visibility based on processing status */
+        }
+        @media (max-width: 640px) {
+            .container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.75rem; /* text-3xl */
+            }
+            .btn {
+                padding: 12px 20px;
+                font-size: 1rem;
+                min-width: unset; /* Remove min-width on small screens */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Small Alley cuma 15 Menit Doang</h1>
+
+        <div class="input-group">
+            <label for="regularKmzFile">Unggah KMZ ABD Reguler:</label>
+            <input type="file" id="regularKmzFile" accept=".kmz">
+        </div>
+
+        <div class="input-group">
+            <label for="smallAlleyKmzFile">Unggah Bahan Small ALley:</label>
+            <input type="file" id="smallAlleyKmzFile" accept=".kmz">
+        </div>
+
+        <div class="input-group">
+            <label for="idArea">ID Area (misalnya, 33PML00421C):</label>
+            <input type="text" id="idArea" placeholder="Masukkan ID Area (misalnya, 33PML00421C)">
+        </div>
+
+        <div class="button-group">
+            <button id="processBtn" class="btn">Proses File KMZ</button>
+            <a id="downloadLink" href="#" download class="btn btn-download btn-disabled">Unduh KMZ yang Diproses</a>
+        </div>
+        
+        <div id="messageBox" class="message-box" style="display: none;"></div>
+        <p id="downloadMessage" class="download-message"></p>
+    </div>
+
+    <script>
+        const processBtn = document.getElementById('processBtn');
+        const regularKmzFileInput = document.getElementById('regularKmzFile');
+        const smallAlleyKmzFileInput = document.getElementById('smallAlleyKmzFile');
+        const idAreaInput = document.getElementById('idArea');
+        const messageBox = document.getElementById('messageBox');
+        const downloadLink = document.getElementById('downloadLink');
+        const downloadMessage = document.getElementById('downloadMessage');
+
+        /**
+         * Mengatur status tombol unduh.
+         * @param {boolean} enable - True untuk mengaktifkan, false untuk menonaktifkan.
+         * @param {string} href - URL file untuk diunduh.
+         * @param {string} filename - Nama file untuk diunduh.
+         */
+        function setDownloadButtonStatus(enable, href = '#', filename = '') {
+            if (enable) {
+                downloadLink.classList.remove('btn-disabled');
+                downloadLink.href = href;
+                downloadLink.download = filename;
+                downloadLink.style.pointerEvents = 'auto'; // Mengaktifkan kembali peristiwa pointer
+                downloadMessage.textContent = 'File KMZ Anda sudah siap!';
+                downloadMessage.style.display = 'block';
+            } else {
+                downloadLink.classList.add('btn-disabled');
+                downloadLink.href = '#';
+                downloadLink.download = '';
+                downloadLink.style.pointerEvents = 'none'; // Menonaktifkan peristiwa pointer
+                downloadMessage.textContent = 'Mohon proses file KMZ terlebih dahulu.';
+                downloadMessage.style.display = 'block'; // Menampilkan pesan bahwa perlu proses
+            }
+        }
+
+        /**
+         * Menampilkan pesan kepada pengguna di kotak pesan.
+         * @param {string} message - Teks pesan.
+         * @param {'info'|'success'|'error'} type - Tipe pesan (memengaruhi gaya).
+         */
+        function showMessage(message, type = 'info') {
+            messageBox.textContent = message;
+            messageBox.className = `message-box ${type}`;
+            messageBox.style.display = 'block';
+        }
+
+        /**
+         * Menyembunyikan kotak pesan.
+         */
+        function hideMessage() {
+            messageBox.style.display = 'none';
+        }
+
+        /**
+         * Membaca file sebagai ArrayBuffer.
+         * @param {File} file - File yang akan dibaca.
+         * @returns {Promise<ArrayBuffer>} Promise yang diselesaikan dengan konten file sebagai ArrayBuffer.
+         */
+        function readFileAsArrayBuffer(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = (event) => reject(event.target.error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        /**
+         * Menguraikan file KMZ dan mengekstrak konten KML-nya.
+         * Diasumsikan file KML utama bernama 'doc.kml' atau merupakan file .kml pertama yang ditemukan.
+         * @param {File} kmzFile - File KMZ yang akan diuraikan.
+         * @returns {Promise<string>} Promise yang diselesaikan dengan konten KML sebagai string.
+         */
+        async function unzipKmz(kmzFile) {
+            const zip = new JSZip();
+            const arrayBuffer = await readFileAsArrayBuffer(kmzFile);
+            const loadedZip = await zip.loadAsync(arrayBuffer);
+
+            // Cari file KML utama (biasanya doc.kml)
+            let kmlFile = null;
+            loadedZip.forEach((relativePath, file) => {
+                if (relativePath.endsWith('.kml')) {
+                    kmlFile = file;
+                    return false; // Hentikan iterasi
+                }
+            });
+
+            if (!kmlFile) {
+                throw new Error('Tidak ditemukan file KML di dalam KMZ.');
+            }
+
+            return kmlFile.async('string');
+        }
+
+        /**
+         * Menguraikan string KML menjadi Dokumen DOM.
+         * @param {string} kmlString - Konten KML sebagai string.
+         * @returns {Document} Dokumen XML DOM yang diuraikan.
+         */
+        function parseKmlString(kmlString) {
+            const xmlParser = new DOMParser(); // Inisialisasi DOMParser
+            return xmlParser.parseFromString(kmlString, 'application/xml');
+        }
+
+        /**
+         * Mencari elemen Folder berdasarkan namanya di dalam wadah tertentu.
+         * @param {Document|Element} container - Dokumen DOM atau Elemen untuk dicari.
+         * @param {string} folderName - Nama folder yang akan dicari.
+         * @returns {Element|null} Elemen Folder yang ditemukan atau null jika tidak ditemukan.
+         */
+        function findFolderByName(container, folderName) {
+            const folders = container.querySelectorAll('Folder');
+            for (const folder of folders) {
+                const nameElement = folder.querySelector('name');
+                if (nameElement && nameElement.textContent === folderName) {
+                    return folder;
+                }
+            }
+            return null;
+        }
+
+        /**
+         * Mengekstrak data placemark dari Dokumen KML.
+         * @param {Document} kmlDoc - Dokumen DOM KML.
+         * @param {string[]} folderPath - Array nama folder yang akan dilalui (misalnya, ['DISTRIBUSI', 'HP', 'HOME']).
+         * @returns {Array<Object>} Array objek placemark dengan nama, koordinat, dan extendedData.
+         */
+        function extractPlacemarks(kmlDoc, folderPath = []) {
+            let currentContainer = kmlDoc;
+            if (folderPath.length > 0) {
+                for (const folderName of folderPath) {
+                    const foundFolder = findFolderByName(currentContainer, folderName);
+                    if (foundFolder) {
+                        currentContainer = foundFolder;
+                    } else {
+                        // Folder tidak ditemukan, kembalikan array kosong
+                        return [];
+                    }
+                }
+            }
+
+            const placemarks = [];
+            const placemarkElements = currentContainer.querySelectorAll('Placemark');
+
+            placemarkElements.forEach(pmElement => {
+                const name = pmElement.querySelector('name')?.textContent || '';
+                const coordinatesText = pmElement.querySelector('Point > coordinates')?.textContent || '';
+                const coords = coordinatesText.split(',').map(Number);
+                const longitude = coords[0];
+                const latitude = coords[1];
+
+                const extendedData = {};
+                const simpleDataElements = pmElement.querySelectorAll('ExtendedData SimpleData');
+                simpleDataElements.forEach(sdElement => {
+                    const dataName = sdElement.getAttribute('name');
+                    const dataValue = sdElement.textContent;
+                    if (dataName) {
+                        extendedData[dataName] = dataValue;
+                    }
+                });
+
+                placemarks.push({
+                    name: name,
+                    latitude: latitude,
+                    longitude: longitude,
+                    extendedData: extendedData,
+                    xmlElement: pmElement // Simpan referensi ke elemen asli untuk penggunaan kembali KML lengkap
+                });
+            });
+            return placemarks;
+        }
+
+        /**
+         * Mengekstrak data poligon dari Dokumen KML.
+         * @param {Document} kmlDoc - Dokumen DOM KML.
+         * @param {string[]} folderPath - Array nama folder yang akan dilalui.
+         * @returns {Array<Object>} Array objek poligon dengan nama dan koordinat.
+         */
+        function extractPolygons(kmlDoc, folderPath = []) {
+            let currentContainer = kmlDoc;
+            let pathTrace = []; // Untuk debugging jalur
+            
+            if (folderPath.length > 0) {
+                for (const folderName of folderPath) {
+                    console.log(`[extractPolygons Debug] Mencari folder: "${folderName}" di wadah saat ini.`);
+                    const foundFolder = findFolderByName(currentContainer, folderName);
+                    if (foundFolder) {
+                        currentContainer = foundFolder;
+                        pathTrace.push(folderName);
+                        console.log(`[extractPolygons Debug] Ditemukan folder: "${folderName}". Jalur saat ini: ${pathTrace.join(' / ')}`);
+                    } else {
+                        console.warn(`[extractPolygons Debug] Folder "${folderName}" tidak ditemukan pada jalur: ${folderPath.join(' / ')}. Mengembalikan poligon kosong.`);
+                        return [];
+                    }
+                }
+            }
+
+            const polygons = [];
+            console.log(`[extractPolygons Debug] Mengekstrak placemark dari: ${pathTrace.join(' / ')}`);
+            const placemarkElements = currentContainer.querySelectorAll('Placemark');
+            console.log(`[extractPolygons Debug] Ditemukan ${placemarkElements.length} Placemark di wadah saat ini.`);
+
+            placemarkElements.forEach(pmElement => {
+                const polygonElement = pmElement.querySelector('Polygon');
+                if (polygonElement) { // Hanya proses jika Poligon ada di dalam Placemark ini
+                    const name = pmElement.querySelector('name')?.textContent || '';
+                    const coordinatesText = polygonElement.querySelector('outerBoundaryIs LinearRing coordinates')?.textContent || '';
+                    const coordsRaw = coordinatesText.trim().split(/\s+/).filter(c => c.length > 0);
+
+                    const polyCoords = coordsRaw.map(c => {
+                        const parts = c.split(',').map(Number);
+                        return { longitude: parts[0], latitude: parts[1] };
+                    });
+
+                    polygons.push({
+                        name: name,
+                        coordinates: polyCoords,
+                        xmlElement: pmElement
+                    });
+                    console.log(`[extractPolygons Debug] Poligon diekstrak: ${name}`);
+                } else {
+                    console.log(`[extractPolygons Debug] Placemark "${pmElement.querySelector('name')?.textContent || 'Unnamed'}" tidak mengandung Poligon.`);
+                }
+            });
+            console.log(`[extractPolygons Debug] Selesai mengekstrak poligon. Total ditemukan: ${polygons.length}`);
+            return polygons;
+        }
+
+
+        /**
+         * Menghitung jarak antara dua titik geografis menggunakan rumus Haversine.
+         * @param {number} lat1 - Lintang titik 1.
+         * @param {number} lon1 - Bujur titik 1.
+         * @param {number} lat2 - Lintang titik 2.
+         * @param {number} lon2 - Bujur titik 2.
+         * @returns {number} Jarak dalam meter.
+         */
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // meter
+            const φ1 = lat1 * Math.PI / 180; // φ, λ dalam radian
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            const d = R * c; // dalam meter
+            return d;
+        }
+
+        /**
+         * Memeriksa apakah suatu titik berada di dalam poligon.
+         * @param {{latitude: number, longitude: number}} point - Titik yang akan diperiksa.
+         * @param {Array<{latitude: number, longitude: number}>} polygon - Titik-titik sudut poligon.
+         * @returns {boolean} True jika titik berada di dalam poligon, false jika sebaliknya.
+         */
+        function isPointInPolygon(point, polygon) {
+            // Algoritma ray-casting
+            let x = point.longitude, y = point.latitude;
+            let inside = false;
+            for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+                let xi = polygon[i].longitude, yi = polygon[i].latitude;
+                let xj = polygon[j].longitude, yj = polygon[j].latitude;
+
+                let intersect = ((yi > y) != (yj > y)) &&
+                                (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        /**
+         * Mencari placemark terdekat dengan titik target dari daftar placemark.
+         * @param {{latitude: number, longitude: number}} targetPoint - Titik target.
+         * @param {Array<Object>} placemarkList - Daftar objek placemark.
+         * @returns {Object|null} Objek placemark terdekat, atau null jika daftar kosong.
+         */
+        function findClosestPlacemark(targetPoint, placemarkList) {
+            if (!placemarkList || placemarkList.length === 0) return null;
+
+            let closest = null;
+            let minDistance = Infinity;
+
+            for (const pm of placemarkList) {
+                const dist = calculateDistance(targetPoint.latitude, targetPoint.longitude, pm.latitude, pm.longitude);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    closest = pm;
+                }
+            }
+            return closest;
+        }
+
+        /**
+         * Memformat angka menjadi 6 desimal.
+         * @param {number} num - Angka yang akan diformat.
+         * @returns {string} String yang diformat.
+         */
+        function formatCoordinate(num) {
+            return num.toFixed(6);
+        }
+
+        /**
+         * Menghasilkan string XML KML untuk satu Placemark HP.
+         * @param {Object} hpData - Data HP yang diproses.
+         * @returns {string} String XML KML untuk placemark.
+         */
+        function generateHpPlacemarkXml(hpData) {
+            const isWhiteIcon = hpData.HOUSE_COMMENT_ === "-"; // Periksa apakah harus putih
+            const styleId = isWhiteIcon ? 'whitePointStyleMap' : 'pointStyleMap'; // Gunakan StyleMap untuk konsistensi
+            
+            const schemaName = hpData.Category_BizPass === "RESIDENCE" ? "HOME" : "HOME-BIZ"; // Diasumsikan Category_BizPass menentukan nama skema
+            const schemaId = `S_${schemaName}_SSSSSSSSSSSSSSSSSSSSSSSSSS`; // ID Skema tetap seperti contoh
+
+            return `
+            <Placemark>
+                <name>${hpData.HOUSE_NUMBER}</name>
+                <styleUrl>#${styleId}</styleUrl>
+                <ExtendedData>
+                    <SchemaData schemaUrl="#${schemaId}">
+                        <SimpleData name="HOMEPASS_ID">${hpData.HOMEPASS_ID}</SimpleData>
+                        <SimpleData name="CLUSTER_NAME">${hpData.CLUSTER_NAME}</SimpleData>
+                        <SimpleData name="PREFIX_ADDRESS">${hpData.PREFIX_ADDRESS}</SimpleData>
+                        <SimpleData name="STREET_NAME">${hpData.STREET_NAME}</SimpleData>
+                        <SimpleData name="HOUSE_NUMBER">${hpData.HOUSE_NUMBER}</SimpleData>
+                        <SimpleData name="BLOCK">${hpData.BLOCK}</SimpleData>
+                        <SimpleData name="FLOOR">${hpData.FLOOR}</SimpleData>
+                        <SimpleData name="RT">${hpData.RT}</SimpleData>
+                        <SimpleData name="RW">${hpData.RW}</SimpleData>
+                        <SimpleData name="DISTRICT">${hpData.DISTRICT}</SimpleData>
+                        <SimpleData name="SUB_DISTRICT">${hpData.SUB_DISTRICT}</SimpleData>
+                        <SimpleData name="FDT_CODE">${hpData.FDT_CODE}</SimpleData>
+                        <SimpleData name="FAT_CODE">${hpData.FAT_CODE}</SimpleData>
+                        <SimpleData name="BUILDING_LATITUDE">${hpData.BUILDING_LATITUDE}</SimpleData>
+                        <SimpleData name="BUILDING_LONGITUDE">${hpData.BUILDING_LONGITUDE}</SimpleData>
+                        <SimpleData name="Category_BizPass">${hpData.Category_BizPass}</SimpleData>
+                        <SimpleData name="POST_CODE">${hpData.POST_CODE}</SimpleData>
+                        <SimpleData name="ADDRESS_POLE___FAT">${hpData.ADDRESS_POLE___FAT}</SimpleData>
+                        <SimpleData name="OV_UG">${hpData.OV_UG}</SimpleData>
+                        <SimpleData name="HOUSE_COMMENT_">${hpData.HOUSE_COMMENT_}</SimpleData>
+                        <SimpleData name="BUILDING_NAME">${hpData.BUILDING_NAME}</SimpleData>
+                        <SimpleData name="TOWER">${hpData.TOWER}</SimpleData>
+                        <SimpleData name="APTN">${hpData.APTN}</SimpleData>
+                        <SimpleData name="FIBER_NODE__HFC_">${hpData.FIBER_NODE__HFC_}</SimpleData>
+                        <SimpleData name="ID_Area">${hpData.ID_Area}</SimpleData>
+                        <SimpleData name="Clamp_Hook_ID">${hpData.Clamp_Hook_ID}</SimpleData>
+                    </SchemaData>
+                </ExtendedData>
+                <Point>
+                    <coordinates>${hpData.BUILDING_LONGITUDE},${hpData.BUILDING_LATITUDE},0</coordinates>
+                </Point>
+            </Placemark>`;
+        }
+
+        /**
+         * Menghasilkan string XML KML untuk satu Placemark HOOK.
+         * @param {Object} hookData - Data HOOK yang diproses.
+         * @returns {string} String XML KML untuk placemark.
+         */
+        function generateHookPlacemarkXml(hookData) {
+            const schemaId = `S_HOOK_SSS`; // ID Skema tetap seperti contoh
+
+            return `
+            <Placemark>
+                <name>${hookData.Clamp_Hook_ID}</name>
+                <styleUrl>#hookStyleMap</styleUrl> <!-- HOOK menggunakan normHookStyle (kotak merah) -->
+                <ExtendedData>
+                    <SchemaData schemaUrl="#${schemaId}">
+                        <SimpleData name="Clamp_Hook_ID">${hookData.Clamp_Hook_ID}</SimpleData>
+                        <SimpleData name="Clamp_Hook_LATITUDE">${hookData.Clamp_Hook_LATITUDE}</SimpleData>
+                        <SimpleData name="Clamp_Hook_LONGITUDE">${hookData.Clamp_Hook_LONGITUDE}</SimpleData>
+                    </SchemaData>
+                </ExtendedData>
+                <Point>
+                    <coordinates>${hookData.Clamp_Hook_LONGITUDE},${hookData.Clamp_Hook_LATITUDE},0</coordinates>
+                </Point>
+            </Placemark>`;
+        }
+
+        /**
+         * Fungsi utama untuk memproses file KMZ.
+         */
+        processBtn.addEventListener('click', async () => {
+            hideMessage();
+            setDownloadButtonStatus(false); // Nonaktifkan tombol download saat memulai proses
+
+            const regularKmzFile = regularKmzFileInput.files[0];
+            const smallAlleyKmzFile = smallAlleyKmzFileInput.files[0];
+            const idArea = idAreaInput.value.trim();
+
+            if (!regularKmzFile || !smallAlleyKmzFile || !idArea) {
+                showMessage('Harap unggah kedua file KMZ dan masukkan ID Area.', 'error');
+                return;
+            }
+
+            showMessage('Memproses file KMZ... Ini mungkin memakan waktu.', 'info');
+
+            try {
+                // 1. Menguraikan dan menganalisis KMZ ABD Reguler
+                const regularKmlString = await unzipKmz(regularKmzFile);
+                const regularKmlDoc = parseKmlString(regularKmlString);
+                console.log('KMZ Reguler berhasil diurai:', regularKmlDoc);
+
+                // Mengekstrak semua data HP yang ada dari KMZ Reguler untuk pencarian
+                const regularHPs = extractPlacemarks(regularKmlDoc, ['DISTRIBUSI', 'HP', 'HOME'])
+                                   .concat(extractPlacemarks(regularKmlDoc, ['DISTRIBUSI', 'HP', 'HOME-BIZ']));
+                console.log('HP Reguler diekstrak:', regularHPs.length);
+
+                // 2. Menguraikan dan menganalisis KMZ Data Gang Kecil
+                const smallAlleyKmlString = await unzipKmz(smallAlleyKmzFile);
+                const smallAlleyKmlDoc = parseKmlString(smallAlleyKmlString);
+                console.log('KMZ Gang Kecil berhasil diurai:', smallAlleyKmlDoc);
+
+                // Mengekstrak HP, HOOK, dan Batas FAT Gang Kecil
+                const smallAlleyHPs = extractPlacemarks(smallAlleyKmlDoc, ['DISTRIBUSI', 'HP', 'HOME'])
+                                    .concat(extractPlacemarks(smallAlleyKmlDoc, ['DISTRIBUSI', 'HP', 'HOME-BIZ']));
+                const smallAlleyHOOKs = extractPlacemarks(smallAlleyKmlDoc, ['DISTRIBUSI', 'HOOK']);
+                // Perbaikan di sini: path untuk Boundary FAT adalah langsung di bawah Document
+                const boundaryFATs = extractPolygons(smallAlleyKmlDoc, ['BOUNDARY FAT']); 
+
+                console.log('HP Gang Kecil:', smallAlleyHPs.length);
+                console.log('HOOK Gang Kecil:', smallAlleyHOOKs.length);
+                console.log('Batas FAT:', boundaryFATs.length);
+
+
+                // 3. Memproses metadata HP Gang Kecil
+                const processedSmallAlleyHPs = [];
+                for (const hp of smallAlleyHPs) {
+                    const newHpData = {
+                        HOMEPASS_ID: '-',
+                        CLUSTER_NAME: '-',
+                        PREFIX_ADDRESS: 'JL.',
+                        STREET_NAME: '-',
+                        HOUSE_NUMBER: hp.name,
+                        BLOCK: '-',
+                        FLOOR: '-',
+                        RT: '-',
+                        RW: '-',
+                        DISTRICT: '-',
+                        SUB_DISTRICT: '-',
+                        FDT_CODE: '-',
+                        FAT_CODE: '-',
+                        BUILDING_LATITUDE: formatCoordinate(hp.latitude),
+                        BUILDING_LONGITUDE: formatCoordinate(hp.longitude),
+                        Category_BizPass: 'RESIDENCE',
+                        POST_CODE: '-',
+                        ADDRESS_POLE___FAT: '-',
+                        OV_UG: 'O',
+                        HOUSE_COMMENT_: '-',
+                        BUILDING_NAME: '-',
+                        TOWER: '-',
+                        APTN: '-',
+                        FIBER_NODE__HFC_: '-',
+                        ID_Area: idArea,
+                        Clamp_Hook_ID: '-'
+                    };
+
+                    // Cari HP reguler terdekat untuk pewarisan metadata
+                    const closestRegularHP = findClosestPlacemark(hp, regularHPs);
+                    if (closestRegularHP && closestRegularHP.extendedData) {
+                        const ed = closestRegularHP.extendedData;
+                        newHpData.HOMEPASS_ID = ed.HOMEPASS_ID || '-';
+                        newHpData.CLUSTER_NAME = ed.CLUSTER_NAME || '-';
+                        newHpData.BLOCK = ed.BLOCK || '-';
+                        newHpData.FLOOR = ed.FLOOR || '-';
+                        newHpData.RT = ed.RT || '-';
+                        newHpData.RW = ed.RW || '-';
+                        newHpData.DISTRICT = ed.DISTRICT || '-';
+                        newHpData.SUB_DISTRICT = ed.SUB_DISTRICT || '-';
+                        newHpData.FDT_CODE = ed.FDT_CODE || '-';
+                        newHpData.POST_CODE = ed.POST_CODE || '-';
+                        newHpData.ADDRESS_POLE___FAT = ed.ADDRESS_POLE___FAT || '-';
+                        newHpData.BUILDING_NAME = ed.BUILDING_NAME || '-';
+                        newHpData.TOWER = ed.TOWER || '-';
+                        newHpData.APTN = ed.APTN || '-';
+                        newHpData.FIBER_NODE__HFC_ = ed.FIBER_NODE__HFC_ || '-';
+                        if (ed.Category_BizPass === 'BUSINESS') {
+                             newHpData.Category_BizPass = 'BUSINESS';
+                        }
+                    }
+
+                    // Tentukan FAT_CODE berdasarkan Batas FAT yang melingkupinya
+                    if (boundaryFATs.length > 0) {
+                        for (const fatPoly of boundaryFATs) {
+                            if (isPointInPolygon(hp, fatPoly.coordinates)) {
+                                newHpData.FAT_CODE = fatPoly.name;
+                                break;
+                            }
+                        }
+                    } else {
+                        console.warn("Tidak ditemukan Batas FAT di KMZ Gang Kecil. FAT_CODE akan tetap default.");
+                    }
+
+                    // Tentukan Clamp_Hook_ID dan HOUSE_COMMENT_
+                    const closestHook = findClosestPlacemark(hp, smallAlleyHOOKs);
+                    if (closestHook) {
+                        const distanceToHook = calculateDistance(hp.latitude, hp.longitude, closestHook.latitude, closestHook.longitude);
+                        if (distanceToHook < 50) {
+                            newHpData.Clamp_Hook_ID = closestHook.name;
+                            newHpData.HOUSE_COMMENT_ = 'NEED FURTHER PERMIT';
+                        }
+                    }
+
+                    processedSmallAlleyHPs.push(newHpData);
+                }
+
+                // 4. Memproses metadata HOOK
+                const processedHOOKs = [];
+                for (const hook of smallAlleyHOOKs) {
+                    processedHOOKs.push({
+                        Clamp_Hook_ID: hook.name,
+                        Clamp_Hook_LATITUDE: formatCoordinate(hook.latitude),
+                        Clamp_Hook_LONGITUDE: formatCoordinate(hook.longitude)
+                    });
+                }
+
+                // 5. Membuat struktur KML baru secara dinamis
+                // Membuat Document, Schema, dan Style di awal
+                const newKmlDoc = parseKmlString(`<?xml version="1.0" encoding="UTF-8"?>
+                    <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+                    <Document>
+                        <name>ABD-${idArea}_001.kml</name>
+                        <!-- Skema dan Gaya global -->
+                        <Schema name="HOME" id="S_HOME_SSSSSSSSSSSSSSSSSSSSSSSSSS">
+                            <SimpleField type="string" name="HOMEPASS_ID"><displayName>&lt;b&gt;HOMEPASS_ID&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="CLUSTER_NAME"><displayName>&lt;b&gt;CLUSTER_NAME&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="PREFIX_ADDRESS"><displayName>&lt;b&gt;PREFIX_ADDRESS&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="STREET_NAME"><displayName>&lt;b&gt;STREET_NAME&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="HOUSE_NUMBER"><displayName>&lt;b&gt;HOUSE_NUMBER&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="BLOCK"><displayName>&lt;b&gt;BLOCK&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="FLOOR"><displayName>&lt;b&gt;FLOOR&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="RT"><displayName>&lt;b&gt;RT&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="RW"><displayName>&lt;b&gt;RW&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="DISTRICT"><displayName>&lt;b&gt;DISTRICT&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="SUB_DISTRICT"><displayName>&lt;b&gt;SUB_DISTRICT&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="FDT_CODE"><displayName>&lt;b&gt;FDT_CODE&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="FAT_CODE"><displayName>&lt;b&gt;FAT_CODE&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="BUILDING_LATITUDE"><displayName>&lt;b&gt;BUILDING_LATITUDE&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="BUILDING_LONGITUDE"><displayName>&lt;b&gt;BUILDING_LONGITUDE&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="Category_BizPass"><displayName>&lt;b&gt;Category BizPass&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="POST_CODE"><displayName>&lt;b&gt;POST CODE&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="ADDRESS_POLE___FAT"><displayName>&lt;b&gt;ADDRESS POLE / FAT&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="OV_UG"><displayName>&lt;b&gt;OV_UG&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="HOUSE_COMMENT_"><displayName>&lt;b&gt;HOUSE_COMMENT_&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="BUILDING_NAME"><displayName>&lt;b&gt;BUILDING_NAME&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="TOWER"><displayName>&lt;b&gt;TOWER&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="APTN"><displayName>&lt;b&gt;APTN&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="FIBER_NODE__HFC_"><displayName>&lt;b&gt;FIBER_NODE__HFC_&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="ID_Area"><displayName>&lt;b&gt;ID_Area&lt;/b&gt;</displayName>
+                            </SimpleField>
+                            <SimpleField type="string" name="Clamp_Hook_ID"><displayName>&lt;b&gt;Clamp_Hook_ID&lt;/b&gt;</displayName>
+                            </SimpleField>
+	                    </Schema>
+                        <Schema name="HOOK" id="S_HOOK_SSS">
+                            <SimpleField type="string" name="Clamp_Hook_ID"><displayName>&lt;b&gt;Clamp_Hook_ID&lt;/b&gt;</displayName></SimpleField>
+                            <SimpleField type="string" name="Clamp_Hook_LATITUDE"><displayName>&lt;b&gt;Clamp_Hook_LATITUDE&lt;/b&gt;</displayName></SimpleField>
+                            <SimpleField type="string" name="Clamp_Hook_LONGITUDE"><displayName>&lt;b&gt;Clamp_Hook_LONGITUDE&lt;/b&gt;</displayName></SimpleField>
+                        </Schema>
+                        <!-- Gaya untuk HP (merah dan putih) dan HOOK -->
+                        <Style id="hlightPointStyle">
+                            <IconStyle>
+                                <color>ff0000ff</color>
+                                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle_highlight.png</href></Icon>
+                            </IconStyle>
+                            <BalloonStyle>
+                                <text><![CDATA[<table border="0">
+                                <tr><td><b>HOMEPASS_ID</b></td><td>$[HOME/HOMEPASS_ID]</td></tr>
+                                <tr><td><b>CLUSTER_NAME</b></td><td>$[HOME/CLUSTER_NAME]</td></tr>
+                                <tr><td><b>PREFIX_ADDRESS</b></td><td>$[HOME/PREFIX_ADDRESS]</td></tr>
+                                <tr><td><b>STREET_NAME</b></td><td>$[HOME/STREET_NAME]</td></tr>
+                                <tr><td><b>HOUSE_NUMBER</b></td><td>$[HOME/HOUSE_NUMBER]</td></tr>
+                                <tr><td><b>BLOCK</b></td><td>$[HOME/BLOCK]</td></tr>
+                                <tr><td><b>FLOOR</b></td><td>$[HOME/FLOOR]</td></tr>
+                                <tr><td><b>RT</b></td><td>$[HOME/RT]</td></tr>
+                                <tr><td><b>RW</b></td><td>$[HOME/RW]</td></tr>
+                                <tr><td><b>DISTRICT</b></td><td>$[HOME/DISTRICT]</td></tr>
+                                <tr><td><b>SUB_DISTRICT</b></td><td>$[HOME/SUB_DISTRICT]</td></tr>
+                                <tr><td><b>FDT_CODE</b></td><td>$[HOME/FDT_CODE]</td></tr>
+                                <tr><td><b>FAT_CODE</b></td><td>$[HOME/FAT_CODE]</td></tr>
+                                <tr><td><b>BUILDING_LATITUDE</b></td><td>$[HOME/BUILDING_LATITUDE]</td></tr>
+                                <tr><td><b>BUILDING_LONGITUDE</b></td><td>$[HOME/BUILDING_LONGITUDE]</td></tr>
+                                <tr><td><b>Category BizPass</b></td><td>$[HOME/Category_BizPass]</td></tr>
+                                <tr><td><b>POST CODE</b></td><td>$[HOME/POST_CODE]</td></tr>
+                                <tr><td><b>ADDRESS POLE / FAT</b></td><td>$[HOME/ADDRESS_POLE___FAT]</td></tr>
+                                <tr><td><b>OV_UG</b></td><td>$[HOME/OV_UG]</td></tr>
+                                <tr><td><b>HOUSE_COMMENT_</b></td><td>$[HOME/HOUSE_COMMENT_]</td></tr>
+                                <tr><td><b>BUILDING_NAME</b></td><td>$[HOME/BUILDING_NAME]</td></tr>
+                                <tr><td><b>TOWER</b></td><td>$[HOME/TOWER]</td></tr>
+                                <tr><td><b>APTN</b></td><td>$[HOME/APTN]</td></tr>
+                                <tr><td><b>FIBER_NODE__HFC_</b></td><td>$[HOME/FIBER_NODE__HFC_]</td></tr>
+                                <tr><td><b>ID_Area</b></td><td>$[HOME/ID_Area]</td></tr>
+                                <tr><td><b>Clamp_Hook_ID</b></td><td>$[HOME/Clamp_Hook_ID]</td></tr>
+                                </table>
+                                ]]></text>
+		                    </BalloonStyle>
+                        </Style>
+                        <Style id="normPointStyle">
+                            <IconStyle>
+                                <color>ff0000ff</color> <!-- Warna merah untuk HP/HOOK default -->
+                                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+                            </IconStyle>
+                            <BalloonStyle>
+                                <text><![CDATA[<table border="0">
+                                <tr><td><b>HOMEPASS_ID</b></td><td>$[HOME/HOMEPASS_ID]</td></tr>
+                                <tr><td><b>CLUSTER_NAME</b></td><td>$[HOME/CLUSTER_NAME]</td></tr>
+                                <tr><td><b>PREFIX_ADDRESS</b></td><td>$[HOME/PREFIX_ADDRESS]</td></tr>
+                                <tr><td><b>STREET_NAME</b></td><td>$[HOME/STREET_NAME]</td></tr>
+                                <tr><td><b>HOUSE_NUMBER</b></td><td>$[HOME/HOUSE_NUMBER]</td></tr>
+                                <tr><td><b>BLOCK</b></td><td>$[HOME/BLOCK]</td></tr>
+                                <tr><td><b>FLOOR</b></td><td>$[HOME/FLOOR]</td></tr>
+                                <tr><td><b>RT</b></td><td>$[HOME/RT]</td></tr>
+                                <tr><td><b>RW</b></td><td>$[HOME/RW]</td></tr>
+                                <tr><td><b>DISTRICT</b></td><td>$[HOME/DISTRICT]</td></tr>
+                                <tr><td><b>SUB_DISTRICT</b></td><td>$[HOME/SUB_DISTRICT]</td></tr>
+                                <tr><td><b>FDT_CODE</b></td><td>$[HOME/FDT_CODE]</td></tr>
+                                <tr><td><b>FAT_CODE</b></td><td>$[HOME/FAT_CODE]</td></tr>
+                                <tr><td><b>BUILDING_LATITUDE</b></td><td>$[HOME/BUILDING_LATITUDE]</td></tr>
+                                <tr><td><b>BUILDING_LONGITUDE</b></td><td>$[HOME/BUILDING_LONGITUDE]</td></tr>
+                                <tr><td><b>Category BizPass</b></td><td>$[HOME/Category_BizPass]</td></tr>
+                                <tr><td><b>POST CODE</b></td><td>$[HOME/POST_CODE]</td></tr>
+                                <tr><td><b>ADDRESS POLE / FAT</b></td><td>$[HOME/ADDRESS_POLE___FAT]</td></tr>
+                                <tr><td><b>OV_UG</b></td><td>$[HOME/OV_UG]</td></tr>
+                                <tr><td><b>HOUSE_COMMENT_</b></td><td>$[HOME/HOUSE_COMMENT_]</td></tr>
+                                <tr><td><b>BUILDING_NAME</b></td><td>$[HOME/BUILDING_NAME]</td></tr>
+                                <tr><td><b>TOWER</b></td><td>$[HOME/TOWER]</td></tr>
+                                <tr><td><b>APTN</b></td><td>$[HOME/APTN]</td></tr>
+                                <tr><td><b>FIBER_NODE__HFC_</b></td><td>$[HOME/FIBER_NODE__HFC_]</td></tr>
+                                <tr><td><b>ID_Area</b></td><td>$[HOME/ID_Area]</td></tr>
+                                <tr><td><b>Clamp_Hook_ID</b></td><td>$[HOME/Clamp_Hook_ID]</td></tr>
+                                </table>
+                                ]]></text>
+		                    </BalloonStyle>
+                        </Style>
+                        <!-- Gaya untuk HOOK (normal) -->
+                        <Style id="normHookStyle">
+                            <IconStyle>
+                                <color>ff0000ff</color> <!-- Warna merah untuk HOOK default -->
+                                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_square.png</href></Icon> <!-- Contoh ikon untuk Hook -->
+                            </IconStyle>
+                            <BalloonStyle>
+                                <text><![CDATA[<table border="0">
+                                    <tr><td><b>Clamp_Hook_ID</b></td><td>$[HOOK/Clamp_Hook_ID]</td></tr>
+                                    <tr><td><b>Clamp_Hook_LATITUDE</b></td><td>$[HOOK/Clamp_Hook_LATITUDE]</td></tr>
+                                    <tr><td><b>Clamp_Hook_LONGITUDE</b></td><td>$[HOOK/Clamp_Hook_LONGITUDE]</td></tr>
+                                </table>]]></text>
+                            </BalloonStyle>
+                        </Style>
+                        <!-- Gaya untuk HP dengan HOUSE_COMMENT_ = "-" (ikon putih) -->
+                        <Style id="whitePointStyle">
+                            <IconStyle>
+                                <color>ffffffff</color> <!-- Warna putih -->
+                                <Icon><href>http://maps.google.com/mapfiles/kml/shapes/placemark_circle.png</href></Icon>
+                            </IconStyle>
+                             <BalloonStyle>
+                                <text><![CDATA[<table border="0">
+                                <tr><td><b>HOMEPASS_ID</b></td><td>$[HOME/HOMEPASS_ID]</td></tr>
+                                <tr><td><b>CLUSTER_NAME</b></td><td>$[HOME/CLUSTER_NAME]</td></tr>
+                                <tr><td><b>PREFIX_ADDRESS</b></td><td>$[HOME/PREFIX_ADDRESS]</td></tr>
+                                <tr><td><b>STREET_NAME</b></td><td>$[HOME/STREET_NAME]</td></tr>
+                                <tr><td><b>HOUSE_NUMBER</b></td><td>$[HOME/HOUSE_NUMBER]</td></tr>
+                                <tr><td><b>BLOCK</b></td><td>$[HOME/BLOCK]</td></tr>
+                                <tr><td><b>FLOOR</b></td><td>$[HOME/FLOOR]</td></tr>
+                                <tr><td><b>RT</b></td><td>$[HOME/RT]</td></tr>
+                                <tr><td><b>RW</b></td><td>$[HOME/RW]</td></tr>
+                                <tr><td><b>DISTRICT</b></td><td>$[HOME/DISTRICT]</td></tr>
+                                <tr><td><b>SUB_DISTRICT</b></td><td>$[HOME/SUB_DISTRICT]</td></tr>
+                                <tr><td><b>FDT_CODE</b></td><td>$[HOME/FDT_CODE]</td></tr>
+                                <tr><td><b>FAT_CODE</b></td><td>$[HOME/FAT_CODE]</td></tr>
+                                <tr><td><b>BUILDING_LATITUDE</b></td><td>$[HOME/BUILDING_LATITUDE]</td></tr>
+                                <tr><td><b>BUILDING_LONGITUDE</b></td><td>$[HOME/BUILDING_LONGITUDE]</td></tr>
+                                <tr><td><b>Category BizPass</b></td><td>$[HOME/Category_BizPass]</td></tr>
+                                <tr><td><b>POST CODE</b></td><td>$[HOME/POST_CODE]</td></tr>
+                                <tr><td><b>ADDRESS POLE / FAT</b></td><td>$[HOME/ADDRESS_POLE___FAT]</td></tr>
+                                <tr><td><b>OV_UG</b></td><td>$[HOME/OV_UG]</td></tr>
+                                <tr><td><b>HOUSE_COMMENT_</b></td><td>$[HOME/HOUSE_COMMENT_]</td></tr>
+                                <tr><td><b>BUILDING_NAME</b></td><td>$[HOME/BUILDING_NAME]</td></tr>
+                                <tr><td><b>TOWER</b></td><td>$[HOME/TOWER]</td></tr>
+                                <tr><td><b>APTN</b></td><td>$[HOME/APTN]</td></tr>
+                                <tr><td><b>FIBER_NODE__HFC_</b></td><td>$[HOME/FIBER_NODE__HFC_]</td></tr>
+                                <tr><td><b>ID_Area</b></td><td>$[HOME/ID_Area]</td></tr>
+                                <tr><td><b>Clamp_Hook_ID</b></td><td>$[HOME/Clamp_Hook_ID]</td></tr>
+                                </table>
+                                ]]></text>
+		                    </BalloonStyle>
+                        </Style>
+
+                        <StyleMap id="pointStyleMap">
+                            <Pair><key>normal</key><styleUrl>#normPointStyle</styleUrl></Pair>
+                            <Pair><key>highlight</key><styleUrl>#hlightPointStyle</styleUrl></Pair>
+                        </StyleMap>
+                        <StyleMap id="hookStyleMap">
+                            <Pair><key>normal</key><styleUrl>#normHookStyle</styleUrl></Pair>
+                            <Pair><key>highlight</key><styleUrl>#normHookStyle</styleUrl></Pair>
+                        </StyleMap>
+                        <StyleMap id="whitePointStyleMap">
+                            <Pair><key>normal</key><styleUrl>#whitePointStyle</styleUrl></Pair>
+                            <Pair><key>highlight</key><styleUrl>#hlightPointStyle</styleUrl></Pair>
+                        </StyleMap>
+
+                    </Document>
+                    </kml>`);
+
+                const newKmlDocumentElement = newKmlDoc.querySelector('Document');
+
+                // 6. Buat struktur folder utama dan sub-folder
+                const distribusiFolder = newKmlDoc.createElement('Folder');
+                const hpFolder = newKmlDoc.createElement('Folder');
+                const homeFolder = newKmlDoc.createElement('Folder');
+                const homeBizFolder = newKmlDoc.createElement('Folder');
+                const poleFolder = newKmlDoc.createElement('Folder');
+                const fdtFolder = newKmlDoc.createElement('Folder');
+                const fatFolder = newKmlDoc.createElement('Folder');
+                const cableDistributionFolder = newKmlDoc.createElement('Folder');
+                const cableDropFolder = newKmlDoc.createElement('Folder');
+                const slingWireFolder = newKmlDoc.createElement('Folder');
+                const hookFolder = newKmlDoc.createElement('Folder');
+                const boundaryFolder = newKmlDoc.createElement('Folder');
+                const qspanFolder = newKmlDoc.createElement('Folder');
+
+                // Set nama untuk folder-folder
+                distribusiFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'DISTRIBUSI';
+                hpFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'HP';
+                homeFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'HOME';
+                homeBizFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'HOME-BIZ';
+                poleFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'POLE';
+                fdtFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'FDT';
+                fatFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'FAT';
+                cableDistributionFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'CABLE DISTRIBUTION';
+                cableDropFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'CABLE DROP';
+                slingWireFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'SLING WIRE';
+                hookFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'HOOK';
+                boundaryFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'Boundary';
+                qspanFolder.appendChild(newKmlDoc.createElement('name')).textContent = 'QSPAN';
+
+                // Susun hierarki folder utama
+                newKmlDocumentElement.appendChild(distribusiFolder);
+                newKmlDocumentElement.appendChild(boundaryFolder);
+                newKmlDocumentElement.appendChild(qspanFolder);
+
+                // Susun sub-folder DISTRIBUSI
+                distribusiFolder.appendChild(hpFolder);
+                hpFolder.appendChild(homeFolder);
+                hpFolder.appendChild(homeBizFolder);
+                distribusiFolder.appendChild(poleFolder);
+                distribusiFolder.appendChild(fdtFolder);
+                distribusiFolder.appendChild(fatFolder);
+                distribusiFolder.appendChild(cableDistributionFolder);
+                distribusiFolder.appendChild(cableDropFolder);
+                distribusiFolder.appendChild(slingWireFolder);
+                distribusiFolder.appendChild(hookFolder);
+
+
+                // Sisipkan Placemark HP yang diproses ke folder HOME/HOME-BIZ yang benar
+                processedSmallAlleyHPs.forEach(hpData => {
+                    const hpXml = generateHpPlacemarkXml(hpData);
+                    const parsedHpDoc = parseKmlString(hpXml);
+                    const placemarkElement = parsedHpDoc.querySelector('Placemark');
+                    if (hpData.Category_BizPass === 'RESIDENCE') {
+                        homeFolder.appendChild(newKmlDoc.importNode(placemarkElement, true));
+                    } else { // Jika Category_BizPass bukan RESIDENCE, asumsikan HOME-BIZ
+                        homeBizFolder.appendChild(newKmlDoc.importNode(placemarkElement, true));
+                    }
+                });
+
+                // Sisipkan Placemark HOOK yang diproses
+                processedHOOKs.forEach(hookData => {
+                    const hookXml = generateHookPlacemarkXml(hookData);
+                    const parsedHookDoc = parseKmlString(hookXml);
+                    const placemarkElement = parsedHookDoc.querySelector('Placemark');
+                    hookFolder.appendChild(newKmlDoc.importNode(placemarkElement, true));
+                });
+
+                // Sisipkan poligon Boundary FAT dari smallAlleyKMZ ke folder Boundary output
+                if (boundaryFATs.length > 0) {
+                    const boundaryFatFolderInOutput = newKmlDoc.createElement('Folder');
+                    boundaryFatFolderInOutput.appendChild(newKmlDoc.createElement('name')).textContent = 'BOUNDARY FAT';
+                    boundaryFolder.appendChild(boundaryFatFolderInOutput); // Add the BOUNDARY FAT folder inside Boundary
+
+                    boundaryFATs.forEach(fatPoly => {
+                        boundaryFatFolderInOutput.appendChild(newKmlDoc.importNode(fatPoly.xmlElement, true));
+                    });
+                } else {
+                    console.warn("Tidak ditemukan Batas FAT di KMZ Gang Kecil. Folder 'BOUNDARY FAT' tidak akan dibuat.");
+                }
+
+                // Salin konten dari folder-folder lain dari KMZ Reguler
+                const regularDocRoot = regularKmlDoc.querySelector('Document');
+                if (regularDocRoot) {
+                    Array.from(regularDocRoot.children).forEach(child => {
+                        if (child.tagName === 'Folder') {
+                            const folderName = child.querySelector('name')?.textContent;
+                            
+                            // Salin konten sub-folder dari DISTRIBUSI (selain HP dan HOOK)
+                            if (folderName === 'DISTRIBUSI') {
+                                Array.from(child.children).forEach(subChild => {
+                                    const subFolderName = subChild.querySelector('name')?.textContent;
+                                    if (subChild.tagName === 'Folder') {
+                                        let targetSubFolder = null;
+                                        if (subFolderName === 'POLE') targetSubFolder = poleFolder;
+                                        else if (subFolderName === 'FDT') targetSubFolder = fdtFolder;
+                                        else if (subFolderName === 'FAT') targetSubFolder = fatFolder;
+                                        else if (subFolderName === 'CABLE DISTRIBUTION') targetSubFolder = cableDistributionFolder;
+                                        else if (subFolderName === 'CABLE DROP') targetSubFolder = cableDropFolder;
+                                        else if (subFolderName === 'SLING WIRE') targetSubFolder = slingWireFolder;
+                                        
+                                        if (targetSubFolder) {
+                                            // Salin semua anak dari subChild ke targetSubFolder (kecuali nama)
+                                            Array.from(subChild.children).forEach(grandChild => {
+                                                if (grandChild.tagName !== 'name') {
+                                                    targetSubFolder.appendChild(newKmlDoc.importNode(grandChild, true));
+                                                }
+                                            });
+                                        }
+                                    } else if (subChild.tagName === 'Placemark') { // Salin Placemark langsung di bawah DISTRIBUSI jika ada
+                                        distribusiFolder.appendChild(newKmlDoc.importNode(subChild, true));
+                                    }
+                                });
+                            }
+                            // Salin konten dari QSPAN
+                            else if (folderName === 'QSPAN') {
+                                Array.from(child.children).forEach(regChild => {
+                                    if (regChild.tagName !== 'name') {
+                                        qspanFolder.appendChild(newKmlDoc.importNode(regChild, true));
+                                    }
+                                });
+                            }
+                            // Salin konten lain dari Boundary (selain BOUNDARY FAT, karena itu sudah dari small alley KMZ)
+                            else if (folderName === 'Boundary') {
+                                Array.from(child.children).forEach(regChild => {
+                                    const regChildName = regChild.querySelector('name')?.textContent;
+                                    if (regChild.tagName !== 'name' && regChildName !== 'BOUNDARY FAT') {
+                                        boundaryFolder.appendChild(newKmlDoc.importNode(regChild, true));
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+
+                const serializer = new XMLSerializer();
+                const finalKmlString = serializer.serializeToString(newKmlDoc);
+                console.log('String KML akhir:', finalKmlString);
+
+                // 7. Zip KML baru dan sediakan tautan unduhan
+                const zip = new JSZip();
+                zip.file('doc.kml', finalKmlString);
+                const kmzBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
+
+                const outputFileName = `ABD-${idArea}_001.kmz`;
+                const url = URL.createObjectURL(kmzBlob);
+
+                // Tambahkan analisis hasil ke pesan sukses
+                const hpCount = processedSmallAlleyHPs.length;
+                const hookCount = processedHOOKs.length;
+                showMessage(
+                    `File KMZ berhasil dibuat! Silakan klik tombol "Unduh KMZ yang Diproses" di samping. ` +
+                    `Analisis: Ditemukan ${hpCount} Homepass Small Alley dan ${hookCount} HOOK dalam file yang diunduh.`,
+                    'success'
+                );
+                setDownloadButtonStatus(true, url, outputFileName); // Aktifkan tombol download
+
+            } catch (error) {
+                console.error('Error memproses KMZ:', error);
+                showMessage(`Error: ${error.message}`, 'error');
+                setDownloadButtonStatus(false); // Pastikan tombol dinonaktifkan jika ada error
+            }
+        });
+
+        // Panggil ini saat halaman dimuat untuk mengatur status awal tombol
+        document.addEventListener('DOMContentLoaded', () => {
+            setDownloadButtonStatus(false); 
+        });
+    </script>
+</body>
+</html>
