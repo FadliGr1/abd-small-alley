@@ -643,6 +643,13 @@
                         const ed = closestRegularHP.extendedData;
                         newHpData.HOMEPASS_ID = ed.HOMEPASS_ID || '-';
                         newHpData.CLUSTER_NAME = ed.CLUSTER_NAME || '-';
+                        
+                        // --- START: Added logic for CLUSTER_NAME cleanup ---
+                        if (newHpData.CLUSTER_NAME !== '-') {
+                            newHpData.CLUSTER_NAME = newHpData.CLUSTER_NAME.replace(/DATA|KELURAHAN|DESA/g, '').trim();
+                        }
+                        // --- END: Added logic for CLUSTER_NAME cleanup ---
+
                         newHpData.BLOCK = ed.BLOCK || '-';
                         newHpData.FLOOR = ed.FLOOR || '-';
                         newHpData.RT = ed.RT || '-';
@@ -657,7 +664,7 @@
                         newHpData.APTN = ed.APTN || '-';
                         newHpData.FIBER_NODE__HFC_ = ed.FIBER_NODE__HFC_ || '-';
                         if (ed.Category_BizPass === 'BUSINESS') {
-                             newHpData.Category_BizPass = 'BUSINESS';
+                            newHpData.Category_BizPass = 'BUSINESS';
                         }
                     }
 

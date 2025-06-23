@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FTTH KMZ Automation</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="script.js" defer></script>
+</head>
+<body>
+    <div class="container">
+        <h1>FTTH KMZ Automation</h1>
+
+        <div class="input-section">
+            <label for="regularKmzFile">Unggah KMZ ABD Reguler:</label>
+            <input type="file" id="regularKmzFile" accept=".kmz">
+            <span class="file-name" id="regularFileName">Tidak ada file dipilih</span>
+        </div>
+
+        <div class="input-section">
+            <label for="smallAlleyKmzFile">Unggah Bahan Small ALley:</label>
+            <input type="file" id="smallAlleyKmzFile" accept=".kmz">
+            <span class="file-name" id="smallAlleyFileName">Tidak ada file dipilih</span>
+        </div>
+
+        <div class="input-section">
+            <label for="idArea">Masukkan ID Area (e.g., 33PML00421C):</label>
+            <input type="text" id="idArea" placeholder="Contoh: 33PML00421C">
+        </div>
+
+        <button id="processBtn">Proses File KMZ</button>
+
+        <div id="processingOverlay" class="overlay" style="display: none;">
+            <div class="loader"></div>
+            <p id="loadingMessage">Memulai pemrosesan...</p>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+        <div id="downloadMessage" class="message download-message">
+            <p>Silakan proses file KMZ terlebih dahulu.</p>
+        </div>
+        <a id="downloadLink" class="download-link" style="display: none;">Unduh KMZ yang Diproses</a>
+    </div>
+</body>
+</html>
