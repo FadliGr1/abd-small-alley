@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (closestHook && minHookDistance <= 50) { // If within 50 meters
                 newExtendedData.Clamp_Hook_ID = closestHook.name;
-                newExtendedData.HOUSE_COMMENT_ = 'NEED FURTHER PERMIT';
+                newExtendedData.HOUSE_COMMENT_ = 'NEED SURVEY';
             }
 
 
